@@ -114,6 +114,20 @@ def set_msg_fields(msg, values):
         except ValueError as e:
             raise SetFieldError(field_name, e)
         try:
+            from rosidl_parser.definition import NamespacedType
+            f_type = msg.get_slot_types()[field_name]
+            # Check if field is an array of ROS message types
+            if isinstance(field_type(), list):
+                if isinstance(f_type.basetype, NamespacedType):
+                    # TODO(mikaelarguedas) Consider putting this import logic in a rosidl function
+                    module = importlib.import_module(
+                            '.'.join(f_type.basetype.namespaces))
+                    field_elem_type = getattr(module, f_type.basetype.name)
+                    for n in range(len(value)):
+                        submsg = field_elem_type()
+                        set_msg_fields(submsg, value[n])
+                        value[n] = submsg
+
             setattr(msg, field_name, value)
         except Exception as e:
             raise SetFieldError(field_name, e)
